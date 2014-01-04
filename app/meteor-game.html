@@ -1,0 +1,26 @@
+<head>
+  <title>Conway</title>
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+</head>
+
+<body>
+  {{> game}}
+</body>
+
+<template name="game">
+  <div id='game'>
+    <div class='matrix'>
+    {{#each tiles}}
+      <div class="tile {{cssClassList}}" data-tile-ID='{{document._id}}'></div>
+    {{/each}}
+    </div>
+    <div class='button-group'>
+      {{#if showPauseButton}}
+      <button type=button data-button='pause'><i class='fa fa-pause'></i></button>
+      {{/if}}
+      {{#if showPlayButton}}
+      <button type=button data-button='play'><i class='fa fa-play'></i></button>
+      {{/if}}
+    </div>
+  </div>
+</template>

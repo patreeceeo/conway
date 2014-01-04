@@ -1,0 +1,38 @@
+/* CSS declarations go here */
+
+body {
+  background: rgb(40, 60, 80);
+}
+
+.tile {
+  float: left;
+  height: 40px;
+  width: 40px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.tile.state-off {
+  background: inherit;
+}
+
+.tile.state-on {
+  background: rgba(255, 255, 255, 0.5); 
+}
+
+
+#game .matrix {
+  width: 400px;
+  height: 400px;
+  margin: 1em auto 0 auto;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+
+#game .button-group {
+  margin: 0 auto;
+  width: 400px;
+}
+
+/* #game .button-group button { */
+/*   margin: 0 */
+/* } */
