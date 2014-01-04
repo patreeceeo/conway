@@ -37,21 +37,35 @@ class GameTile
 
 @.createTestData = ->
   Meteor.call 'reset', ->
-    for y in [1..10]
-      for x in [1..10]
+    for y in [1..20]
+      for x in [1..20]
         doc = {
           state: if Math.round(Math.random()) is 1 then 'on' else 'off'
           x: x
           y: y
         }
         GameTileCollection.insert doc
-        ScratchGameTileCollection.insert doc
+        # ScratchGameTileCollection.insert doc
 
-@.updateGameMatrix = ->
+@.emptyMatrix = ->
+  Meteor.call 'reset', ->
+    for y in [1..20]
+      for x in [1..20]
+        doc = {
+          state: 'off'
+          x: x
+          y: y
+        }
+        GameTileCollection.insert doc
+        # ScratchGameTileCollection.insert doc
+
+@.updateGameMatrix = (fn) ->
   for tile in GameTileCollection.find().fetch()
     {x: x, y: y, state: state} = tile.document
     newState = do ->
       neighbors = tile.neighbors(state: 'on').fetch()
+      # if neighbors.length > 0
+      #   debugger
       switch neighbors.length
         when 0, 1
           'off'
@@ -61,8 +75,10 @@ class GameTile
           'on'
         else
           'off'
-    Meteor.call 'updateScratch', {x: x, y: y}, $set: state: newState
-  Meteor.call 'updateMatrixFromScratch'
+    if state isnt newState
+      console.debug 'updateScratch', {x: x, y: y}
+      ScratchGameTileCollection.insert {x: x, y: y, state: newState}
+  Meteor.call 'updateMatrixFromScratch', fn or ->
   
 
 if Meteor.isServer
@@ -71,12 +87,14 @@ if Meteor.isServer
     Meteor.methods
       reset: (selector = {}) ->
         GameTileCollection.remove selector
+        ScratchGameTileCollection.remove selector
       updateMatrixFromScratch: ->
-        ScratchGameTileCollection.find().forEach (tile) ->
-          {x: x, y: y, state: state} = tile.document
+        for scratchTile in ScratchGameTileCollection.find().fetch()
+          {x: x, y: y, state: state} = scratchTile.document
           GameTileCollection.update {x: x, y: y}, $set: state: state
-      updateScratch: (selector, modifier) ->
-        ScratchGameTileCollection.update selector, modifier
+        ScratchGameTileCollection.remove {}
+      updateScratch: (document) ->
+        ScratchGameTileCollection.insert document
 
 
     Meteor.publish 'GameTile', (selector) ->
@@ -104,7 +122,13 @@ if Meteor.isClient
     Session.set 'automaton:isRunning', false
     Deps.autorun ->
       if Session.get 'automaton:isRunning'
-        updateGameMatrixInterval = setInterval updateGameMatrix, 200
+        finished = true 
+        fn = ->
+          if finished
+            finished = false
+            updateGameMatrix ->
+              finished = true
+        updateGameMatrixInterval = setInterval fn, 200
       else
         clearInterval updateGameMatrixInterval
 
