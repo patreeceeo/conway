@@ -8,15 +8,7 @@ this.Conway.updateCell = function(cell) {
     }).fetch();
 
     switch (neighbors.length) {
-      case 0:
-      case 1:
-        return 'off';
-      case 2:
-        return cell.document.state;
-      case 3:
-        return 'on';
-      default:
-        return 'off';
+      // Fill me in
     }
   })();
   return cell;
