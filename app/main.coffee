@@ -1,22 +1,29 @@
-class GameTile
+class ConwayCell
   constructor: (@document) ->
   cssClassList: ->
     {state: state} = @document
     "state-#{state}"      
   neighbors: (selector = {}) ->
     {x: x, y: y} = @document
-    GameTileCollection.find _.extend selector,
+    wrap = (v, min = 1, max = 20) ->
+      Math.max(min, Math.min(v, max))
+    lx = wrap x - 1
+    rx = wrap x + 1
+    uy = wrap y - 1
+    dy = wrap y + 1
+
+    Conway.cellCollection.find _.extend selector,
       $or: [
         {
-          x: $in: [x - 1, x, x + 1]
-          y: y - 1
+          x: $in: [lx, x, rx]
+          y: uy
         }
         {
-          x: $in: [x - 1, x, x + 1]
-          y: y + 1
+          x: $in: [lx, x, rx]
+          y: dy
         }
         {
-          x: $in: [x - 1, x + 1]
+          x: $in: [lx, rx]
           y: y
         }
       ]
@@ -25,100 +32,89 @@ class GameTile
       'off'
     else
       'on'
+  clone: ->
+    new ConwayCell @document
   update: (documentFragment) ->
-    GameTileCollection.update @document._id, $set: documentFragment 
+    Conway.cellCollection.update @document._id, $set: documentFragment 
 
-@.GameTileCollection = new Meteor.Collection 'GameTile',
-  transform: (document) ->
-    new GameTile document
-@.ScratchGameTileCollection = new Meteor.Collection 'ScratchGameTile',
-  transform: (document) ->
-    new GameTile document
+this.Conway ?= {}
 
-@.createTestData = ->
-  Meteor.call 'reset', ->
-    for y in [1..20]
-      for x in [1..20]
-        doc = {
-          state: if Math.round(Math.random()) is 1 then 'on' else 'off'
-          x: x
-          y: y
-        }
-        GameTileCollection.insert doc
-        # ScratchGameTileCollection.insert doc
+_.defaults Conway,
+  geometry:
+    width: 20
+    height: 20
+  cellCollection: new Meteor.Collection 'ConwayCell',
+    transform: (document) ->
+      new ConwayCell document
+  cellCollectionPatch: new Meteor.Collection 'ConwayCellPatch',
+    transform: (document) ->
+      new ConwayCell document
+  createFixtureRandom: ->
+    Meteor.call 'reset', =>
+      for y in [1..@geometry.height]
+        for x in [1..@geometry.width]
+          doc = {
+            state: if Math.round(Math.random()) is 1 then 'on' else 'off'
+            x: x
+            y: y
+          }
+          Conway.cellCollection.insert doc
+  createFixtureEmpty: ->
+    Meteor.call 'reset', =>
+      for y in [1..@geometry.height]
+        for x in [1..@geometry.width]
+          doc = {
+            state: 'off'
+            x: x
+            y: y
+          }
+          Conway.cellCollection.insert doc
+  updateCell: (cell) -> 
+    cell
 
-@.emptyMatrix = ->
-  Meteor.call 'reset', ->
-    for y in [1..20]
-      for x in [1..20]
-        doc = {
-          state: 'off'
-          x: x
-          y: y
-        }
-        GameTileCollection.insert doc
-        # ScratchGameTileCollection.insert doc
+@updateCells = (opinions = {}) ->
+  for cell in Conway.cellCollection.find().fetch()
+    oldState =
+    if _.isObject cell.document.state
+      _.clone cell.document.state
+    else 
+      cell.document.state
 
-@.updateGameMatrix = (fn) ->
-  for tile in GameTileCollection.find().fetch()
-    {x: x, y: y, state: state} = tile.document
-    newState = do ->
-      neighbors = tile.neighbors(state: 'on').fetch()
-      # if neighbors.length > 0
-      #   debugger
-      switch neighbors.length
-        when 0, 1
-          'off'
-        when 2
-          state
-        when 3
-          'on'
-        else
-          'off'
-    if state isnt newState
-      console.debug 'updateScratch', {x: x, y: y}
-      ScratchGameTileCollection.insert {x: x, y: y, state: newState}
-  Meteor.call 'updateMatrixFromScratch', fn or ->
-  
+    cell = Conway.updateCell?(cell)
+    cell.document.target_id = cell.document._id
+    if not _.isEqual oldState, cell.document.state
+      Conway.cellCollectionPatch.insert _(cell.document).omit '_id'
+  Meteor.call 'applyPatch', opinions.finished
+
+@applyPatch = ->
+  for patch in Conway.cellCollectionPatch.find().fetch()
+    {x: x, y: y, state: state} = patch.document
+    # Conway.cellCollection.update {x: x, y: y}, $set: state: state
+    Conway.cellCollection.update patch.document.target_id, $set: state: state
+  Conway.cellCollectionPatch.remove {}
+
 
 if Meteor.isServer
-  Meteor.startup ->
- 
+  Meteor.startup -> 
     Meteor.methods
       reset: (selector = {}) ->
-        GameTileCollection.remove selector
-        ScratchGameTileCollection.remove selector
-      updateMatrixFromScratch: ->
-        for scratchTile in ScratchGameTileCollection.find().fetch()
-          {x: x, y: y, state: state} = scratchTile.document
-          GameTileCollection.update {x: x, y: y}, $set: state: state
-        ScratchGameTileCollection.remove {}
-      updateScratch: (document) ->
-        ScratchGameTileCollection.insert document
+        Conway.cellCollection.remove selector
+        Conway.cellCollectionPatch.remove selector
+      applyPatch: ->
+        global.applyPatch()
 
+    Meteor.publish 'ConwayCell', (selector) ->
+      Conway.cellCollection.find(selector)    
 
-    Meteor.publish 'GameTile', (selector) ->
-      GameTileCollection.find(selector)    
-
-    GameTileCollection.allow
-      insert: ->
-        true
-      update: ->
-        true
-      remove: ->
-        true
-    ScratchGameTileCollection.allow
-      insert: ->
-        true
-      update: ->
-        true
-      remove: ->
-        true
+    always = -> true
+    everything = insert: always, update: always, remove: always
+    Conway.cellCollection.allow everything
+    Conway.cellCollectionPatch.allow everything
 
 if Meteor.isClient
   Meteor.startup ->
-    Meteor.subscribe 'GameTile', {}
-    updateGameMatrixInterval = null
+    Meteor.subscribe 'ConwayCell', {}
+    updateCellsInterval = null
     Session.set 'automaton:isRunning', false
     Deps.autorun ->
       if Session.get 'automaton:isRunning'
@@ -126,9 +122,11 @@ if Meteor.isClient
         fn = ->
           if finished
             finished = false
-            updateGameMatrix ->
+            updateCells finished: ->
               finished = true
-        updateGameMatrixInterval = setInterval fn, 200
+        updateCellsInterval = setInterval fn, 200
       else
-        clearInterval updateGameMatrixInterval
+        clearInterval updateCellsInterval
+
+ 
 

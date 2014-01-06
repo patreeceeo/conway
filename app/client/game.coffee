@@ -7,23 +7,23 @@ _.extend Template.game, do ->
     not Session.get 'automaton:isRunning'
   showPauseButton: ->
     Session.get 'automaton:isRunning'
-  tiles: ->
-    GameTileCollection.find()
+  cells: ->
+    Conway.cellCollection.find()
   events: 
-    'mousedown .tile': (event) ->
+    'mousedown [data-cell-ID]': (event) ->
       event.preventDefault()
-      tile = GameTileCollection.findOne $(event.target).data('tileId')
-      tile.update state: tile.inverseState()
+      cell = Conway.cellCollection.findOne $(event.target).data('cellId')
+      cell.update state: cell.inverseState()
       dragging = true
-    'mouseup .tile': (event) ->
+    'mouseup [data-cell-ID]': (event) ->
       dragging = false
     'mouseleave .matrix': (event) ->
       dragging = false
-    'mouseleave .tile': (event) ->
+    'mouseleave [data-cell-ID]': (event) ->
       if dragging
-        tile = GameTileCollection.findOne $(event.target).data('tileId')
-        tile.update state: tile.inverseState()
-    'dragstart .tile': (event) ->
+        cell = Conway.cellCollection.findOne $(event.target).data('cellId')
+        cell.update state: cell.inverseState()
+    'dragstart [data-cell-ID]': (event) ->
       event.preventDefault()
       false
     'click [data-button=pause]': ->
