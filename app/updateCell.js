@@ -2,7 +2,7 @@ if(this.Conway == null) {
   this.Conway = {}
 }
 this.Conway.updateCell = function(cell) {
-  cell.document.state = (function() {
+  var newState = (function() {
     var neighbors = cell.neighbors({
       state: 'on'
     }).fetch();
@@ -19,5 +19,9 @@ this.Conway.updateCell = function(cell) {
         return 'off';
     }
   })();
-  return cell;
+  retval = {
+    changed: cell.document.state != newState
+  };
+  cell.document.state = newState;
+  return retval;
 };

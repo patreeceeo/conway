@@ -4,9 +4,9 @@ debounce = (delay, fn) ->
 _.extend Template.game, do ->
   dragging = false
   showPlayButton: ->
-    not Session.get 'automaton:isRunning'
+    not Conway.isPlaying()
   showPauseButton: ->
-    Session.get 'automaton:isRunning'
+    Conway.isPlaying()
   cells: ->
     Conway.cellCollection.find()
   events: 
@@ -27,9 +27,9 @@ _.extend Template.game, do ->
       event.preventDefault()
       false
     'click [data-button=pause]': ->
-      Session.set 'automaton:isRunning', false
+      Conway.pause()
     'click [data-button=play]': ->
-      Session.set 'automaton:isRunning', true
+      Conway.play()
 
 
 

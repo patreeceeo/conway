@@ -71,60 +71,90 @@ _.defaults Conway,
           Conway.cellCollection.insert doc
   updateCell: (cell) -> 
     cell
+  play: ->
+    if Meteor.isClient
+      Session.set 'playing', true
+      Meteor.call 'play'
+    else
+      throw new Error 'play() should only be called from the client'
+  pause: ->
+    if Meteor.isClient
+      Session.set 'playing', false
+      Meteor.call 'pause'
+    else
+      throw new Error 'pause() should only be called from the client'
+  isPlaying: ->
+    if Meteor.isClient
+      Session.get('playing')
+    else
+      @playing
+
+
+@addToPatch = (cellDocument) ->
+  patchDocument = 
+    applyTo: cellDocument._id
+    state: cellDocument.state
+
+  Conway.cellCollectionPatch.insert patchDocument 
 
 @updateCells = (opinions = {}) ->
   for cell in Conway.cellCollection.find().fetch()
-    oldState =
-    if _.isObject cell.document.state
-      _.clone cell.document.state
-    else 
-      cell.document.state
-
-    cell = Conway.updateCell?(cell)
-    cell.document.target_id = cell.document._id
-    if not _.isEqual oldState, cell.document.state
-      Conway.cellCollectionPatch.insert _(cell.document).omit '_id'
+    if Conway.updateCell?(cell).changed
+      @addToPatch cell.document
   Meteor.call 'applyPatch', opinions.finished
 
 @applyPatch = ->
   for patch in Conway.cellCollectionPatch.find().fetch()
-    {x: x, y: y, state: state} = patch.document
-    # Conway.cellCollection.update {x: x, y: y}, $set: state: state
-    Conway.cellCollection.update patch.document.target_id, $set: state: state
+    {applyTo: applyTo, state: state} = patch.document
+    Conway.cellCollection.update applyTo, $set: state: state
   Conway.cellCollectionPatch.remove {}
 
 
 if Meteor.isServer
-  Meteor.startup -> 
+  Meteor.startup => 
+    @isRunning = false
     Meteor.methods
       reset: (selector = {}) ->
         Conway.cellCollection.remove selector
         Conway.cellCollectionPatch.remove selector
       applyPatch: ->
         global.applyPatch()
-
+      pause: =>
+        @isRunning = false
+      play: =>
+        @isRunning = true
+        
     Meteor.publish 'ConwayCell', (selector) ->
       Conway.cellCollection.find(selector)    
 
     always = -> true
+    whenNotRunning = ->
+      not @isRunning
     everything = insert: always, update: always, remove: always
-    Conway.cellCollection.allow everything
+
+    Conway.cellCollection.allow
+      insert: whenNotRunning
+      update: whenNotRunning
+      remove: whenNotRunning
     Conway.cellCollectionPatch.allow everything
 
 if Meteor.isClient
   Meteor.startup ->
     Meteor.subscribe 'ConwayCell', {}
     updateCellsInterval = null
-    Session.set 'automaton:isRunning', false
+    Conway.pause()
     Deps.autorun ->
-      if Session.get 'automaton:isRunning'
+      if Conway.isPlaying()
         finished = true 
+        genCount = 0
+        genInterval = 1000
         fn = ->
           if finished
+            genCount++
             finished = false
             updateCells finished: ->
               finished = true
-        updateCellsInterval = setInterval fn, 200
+        updateCellsInterval = setInterval fn, genInterval
       else
         clearInterval updateCellsInterval
 
