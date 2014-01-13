@@ -12,7 +12,7 @@
     <a href="http://en.wikipedia.org/wiki/Conway's_Game_of_Life" target="blank"><h1>Conway's Game of Life</h1></a>
     <div class='matrix'>
     {{#each cells}}
-      <div class="tile {{cssClassList}}" data-cell-ID='{{document._id}}'></div>
+      <div class="tile state-{{state}}" data-cell-ID='{{_id}}'></div>
     {{/each}}
     </div>
     <div class='button-group'>

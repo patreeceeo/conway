@@ -5,28 +5,19 @@ class ConwayCell
     "state-#{state}"      
   neighbors: (selector = {}) ->
     {x: x, y: y} = @document
-    wrap = (v, min = 1, max = 20) ->
-      Math.max(min, Math.min(v, max))
-    lx = wrap x - 1
-    rx = wrap x + 1
-    uy = wrap y - 1
-    dy = wrap y + 1
+    _(Conway.cellCollection).select (doc) ->
+      {x: nx, y: ny, state: state} = doc
 
-    Conway.cellCollection.find _.extend selector,
-      $or: [
-        {
-          x: $in: [lx, x, rx]
-          y: uy
-        }
-        {
-          x: $in: [lx, x, rx]
-          y: dy
-        }
-        {
-          x: $in: [lx, rx]
-          y: y
-        }
-      ]
+      isMe = x is nx and y is ny
+      dx = Math.abs(x - nx)
+      dy = Math.abs(y - ny)
+ 
+      isNeighbor = 
+        (dx <= 1 or dx is 20 - 1) and
+        (dy <= 1 or dy is 20 - 1) and
+        not isMe
+
+      isNeighbor and state is 'on'
   inverseState: ->
     if @document.state is 'on'
       'off'
@@ -35,7 +26,8 @@ class ConwayCell
   clone: ->
     new ConwayCell @document
   update: (documentFragment) ->
-    Conway.cellCollection.update @document._id, $set: documentFragment 
+    Conway.cellCollectionDependency.changed()
+    _(@document).extend documentFragment
 
 this.Conway ?= {}
 
@@ -43,34 +35,39 @@ _.defaults Conway,
   geometry:
     width: 20
     height: 20
-  cellCollection: new Meteor.Collection 'ConwayCell',
-    transform: (document) ->
-      new ConwayCell document
-  cellCollectionPatch: new Meteor.Collection 'ConwayCellPatch',
+  cellCollectionDependency: new Deps.Dependency
+  cellCollection: []
+  cellCollectionPatch: []
+  persistentCellCollection: new Meteor.Collection 'ConwayCell',
     transform: (document) ->
       new ConwayCell document
   createFixtureRandom: ->
-    Meteor.call 'reset', =>
-      for y in [1..@geometry.height]
-        for x in [1..@geometry.width]
-          doc = {
-            state: if Math.round(Math.random()) is 1 then 'on' else 'off'
-            x: x
-            y: y
-          }
-          Conway.cellCollection.insert doc
+    @cellCollection = []
+    for y in [1..@geometry.height]
+      for x in [1..@geometry.width]
+        @cellCollection.push
+          _id: Random.id()
+          state: if Math.round(Math.random()) is 1 then 'on' else 'off'
+          x: x
+          y: y
+    @cellCollectionDependency.changed()
   createFixtureEmpty: ->
-    Meteor.call 'reset', =>
-      for y in [1..@geometry.height]
-        for x in [1..@geometry.width]
-          doc = {
-            state: 'off'
-            x: x
-            y: y
-          }
-          Conway.cellCollection.insert doc
+    @cellCollection = []
+    for y in [1..@geometry.height]
+      for x in [1..@geometry.width]
+        @cellCollection.push
+          _id: Random.id()
+          state: 'off'
+          x: x
+          y: y
+    @cellCollectionDependency.changed()
   updateCell: (cell) -> 
-    cell
+    changed: false
+  getCell: (id) ->
+    new ConwayCell _(@cellCollection).findWhere _id: id
+  getCells: ->
+    @cellCollectionDependency.depend()
+    @cellCollection
   play: ->
     if Meteor.isClient
       Session.set 'playing', true
@@ -84,30 +81,35 @@ _.defaults Conway,
     else
       throw new Error 'pause() should only be called from the client'
   isPlaying: ->
-    if Meteor.isClient
-      Session.get('playing')
-    else
-      @playing
+    Session.get('playing')
 
 
-@addToPatch = (cellDocument) ->
-  patchDocument = 
-    applyTo: cellDocument._id
-    state: cellDocument.state
+@addToPatch = (doc, newState) ->
+  cellPatch =
+    applyTo: doc._id
+    state: newState
 
-  Conway.cellCollectionPatch.insert patchDocument 
+  Conway.cellCollectionPatch.push cellPatch
 
 @updateCells = (opinions = {}) ->
-  for cell in Conway.cellCollection.find().fetch()
-    if Conway.updateCell?(cell).changed
-      @addToPatch cell.document
-  Meteor.call 'applyPatch', opinions.finished
+  for doc in Conway.cellCollection
+    cell = new ConwayCell doc
+    newState = Conway.getNextCellState?(doc, liveNeighbors: cell.neighbors(state: 'on'))
+    if not _.isEqual newState, doc.state
+      @addToPatch doc, newState
+  @applyPatch()
 
 @applyPatch = ->
-  for patch in Conway.cellCollectionPatch.find().fetch()
-    {applyTo: applyTo, state: state} = patch.document
-    Conway.cellCollection.update applyTo, $set: state: state
-  Conway.cellCollectionPatch.remove {}
+  docIndex = 0
+  doc = null
+  for cellPatch in Conway.cellCollectionPatch
+    {applyTo: applyTo, state: newState} = cellPatch
+    loop
+      doc = Conway.cellCollection[docIndex++]
+      break if doc?._id is applyTo
+    doc.state = newState
+  Conway.cellCollectionDependency.changed()
+  Conway.cellCollectionPatch = []
 
 
 if Meteor.isServer
@@ -125,38 +127,25 @@ if Meteor.isServer
         @isRunning = true
         
     Meteor.publish 'ConwayCell', (selector) ->
-      Conway.cellCollection.find(selector)    
+      Conway.persistentCellCollection.find(selector)    
 
     always = -> true
-    whenNotRunning = ->
-      not @isRunning
     everything = insert: always, update: always, remove: always
 
-    Conway.cellCollection.allow
-      insert: whenNotRunning
-      update: whenNotRunning
-      remove: whenNotRunning
-    Conway.cellCollectionPatch.allow everything
+    Conway.persistentCellCollection.allow everything
 
 if Meteor.isClient
   Meteor.startup ->
     Meteor.subscribe 'ConwayCell', {}
-    updateCellsInterval = null
+    updateCellsIntervalID = null
+    if Conway.cellCollection.length is 0
+      Conway.createFixtureEmpty()
     Conway.pause()
     Deps.autorun ->
       if Conway.isPlaying()
-        finished = true 
-        genCount = 0
-        genInterval = 1000
-        fn = ->
-          if finished
-            genCount++
-            finished = false
-            updateCells finished: ->
-              finished = true
-        updateCellsInterval = setInterval fn, genInterval
+        updateCellsIntervalID = setInterval updateCells, 100
       else
-        clearInterval updateCellsInterval
+        clearInterval updateCellsIntervalID
 
  
 

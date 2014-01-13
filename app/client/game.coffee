@@ -8,11 +8,12 @@ _.extend Template.game, do ->
   showPauseButton: ->
     Conway.isPlaying()
   cells: ->
-    Conway.cellCollection.find()
+    Conway.getCells()
   events: 
     'mousedown [data-cell-ID]': (event) ->
       event.preventDefault()
-      cell = Conway.cellCollection.findOne $(event.target).data('cellId')
+      cellID = $(event.target).data('cellId')
+      cell = Conway.getCell(cellID)
       cell.update state: cell.inverseState()
       dragging = true
     'mouseup [data-cell-ID]': (event) ->
@@ -21,7 +22,8 @@ _.extend Template.game, do ->
       dragging = false
     'mouseleave [data-cell-ID]': (event) ->
       if dragging
-        cell = Conway.cellCollection.findOne $(event.target).data('cellId')
+        cellID = $(event.target).data('cellId')
+        cell = Conway.getCell(cellID)
         cell.update state: cell.inverseState()
     'dragstart [data-cell-ID]': (event) ->
       event.preventDefault()
