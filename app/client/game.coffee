@@ -32,6 +32,8 @@ _.extend Template.game, do ->
       Conway.pause()
     'click [data-button=play]': ->
       Conway.play()
+    'click [data-button=save]': ->
+      Conway.save()
 
 
 
