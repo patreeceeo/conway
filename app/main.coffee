@@ -7,9 +7,6 @@ _.extend Conway,
 
 class Conway.Cell
   constructor: (@document) ->
-  cssClassList: ->
-    {state: state} = @document
-    "state-#{state}"
   neighbors: (selector = {}) ->
     {x: x, y: y} = @document
     _(Conway.cellCollection).select (doc) ->
@@ -24,12 +21,9 @@ class Conway.Cell
         (dy <= 1 or dy is 20 - 1) and
         not isMe
 
-      isNeighbor and state is 'on'
+      isNeighbor and state.alive
   inverseState: ->
-    if @document.state is 'on'
-      'off'
-    else
-      'on'
+    alive: not @document.state.alive
   clone: ->
     new Conway.Cell @document
   update: (documentFragment) ->

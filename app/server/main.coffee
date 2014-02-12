@@ -12,10 +12,8 @@ _.extend Conway,
         @persistentCellCollection.insert
           _id: "#{x},#{y}"
           state:
-            if options.randomize and Math.round(Math.random()) is 1
-              'on'
-            else
-              'off'
+            alive: options.randomize and Math.round(Math.random()) is 1
+          stage: 2
           x: x
           y: y
   save: (cellCollection) ->

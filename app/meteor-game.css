@@ -6,27 +6,28 @@ body {
 
 .tile {
   float: left;
-  height: 2em;
-  width: 2em;
+  height: 1em;
+  width: 1em;
   background: rgba(255, 255, 255, 0.5);
+  font-size: 2em;
 }
 
-.tile.state-off {
+.tile.state-off1 {
   background: inherit;
 }
 
-.tile.state-on1 {
-  background: rgba(0, 0, 0, 0.07); 
+.tile.state-off2 {
+  background: rgba(0, 0, 0, 0.05); 
 }
 
-.tile.state-on2,
-.tile.state-on {
+.tile.state-on1 {
+  background: rgba(0, 0, 0, 0.20); 
+}
+
+.tile.state-on2 {
   background: rgba(0, 0, 0, 0.15); 
 }
 
-.tile.state-on3 {
-  background: rgba(31, 0, 0, 0.22); 
-}
 
 
 #game .matrix {
@@ -34,6 +35,8 @@ body {
   height: 40em;
   margin: 1em auto 0 auto;
   background: transparent;
+  font-style: italic;
+  overflow: hidden;
 }
 
 

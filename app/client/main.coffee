@@ -38,7 +38,7 @@ _.extend Conway,
   for doc in Conway.cellCollection
     cell = new Conway.Cell doc
     newState = Conway.getNextCellState? doc,
-      liveNeighbors: cell.neighbors(state: $ne: 'off')
+      liveNeighbors: cell.neighbors(state: alive: true)
     if not _.isEqual newState, doc.state
       @addToPatch doc, newState
   @applyPatch()
