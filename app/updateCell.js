@@ -38,7 +38,7 @@ this.Conway.getNextCellState = function(cell, opinions) {
     _ref = frequencyTable;
     for (letter in _ref) {
       frequency = _ref[letter];
-      total += frequency * 0.37;
+      total += frequency * 0.30;
       if ((old_total < dart && dart < total)) {
         return letter;
       }
@@ -46,7 +46,8 @@ this.Conway.getNextCellState = function(cell, opinions) {
     }
     return ' ';
   };
-
+ 
+  message = 'welcome';
   switch (liveNeighbors.length) {
     case 0:
     case 1:
@@ -54,7 +55,11 @@ this.Conway.getNextCellState = function(cell, opinions) {
     case 2:
       return {alive: cell.state.alive, stage: 1, symbol: cell.state.symbol, showSymbol: true};
     case 3:
-      return {alive: true, stage: 2, symbol: getRandomSymbol(), showSymbol: true};
+      symbol = getRandomSymbol();
+      if(cell.x > 6 && cell.x <= 14 && cell.y > 6 && cell.y <= 14) {
+        symbol = message[cell.x - 7];
+      }
+      return {alive: true, stage: 2, symbol: symbol, showSymbol: true};
     default:
       return {alive: false, stage: 2, symbol: cell.state.symbol, showSymbol: true};
   }

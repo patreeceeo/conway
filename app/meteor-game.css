@@ -13,19 +13,23 @@ body {
 }
 
 .tile.state-off1 {
-  background: inherit;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.15);
 }
 
 .tile.state-off2 {
   background: rgba(0, 0, 0, 0.05); 
+  color: rgba(0, 0, 0, 0.20);
 }
 
 .tile.state-on1 {
   background: rgba(0, 0, 0, 0.20); 
+  color: white;
 }
 
 .tile.state-on2 {
   background: rgba(0, 0, 0, 0.15); 
+  color: white;
 }
 
 
