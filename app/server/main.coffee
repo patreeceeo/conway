@@ -8,12 +8,12 @@ _.extend Conway,
   createFixture: (options = {}) ->
     @persistentCellCollection.remove {}
     for y in [1..@geometry.height]
-      for x in [1..@geometry.width] 
+      for x in [1..@geometry.width]
         @persistentCellCollection.insert
           _id: "#{x},#{y}"
-          state: 
-            if options.randomize and Math.round(Math.random()) is 1 
-              'on' 
+          state:
+            if options.randomize and Math.round(Math.random()) is 1
+              'on'
             else
               'off'
           x: x
@@ -24,16 +24,18 @@ _.extend Conway,
       @persistentCellCollection.update doc._id, data
 
 
-Meteor.startup => 
+Meteor.startup =>
   Meteor.methods
     reset: (selector = {}) ->
-      Conway.cellCollection.remove selector
+      Conway.persistentCellCollection.remove selector
     save: (cellCollection) ->
       console.log arguments
       Conway.save(cellCollection)
+    createFixture: (options) ->
+      Conway.createFixture(options)
       
   Meteor.publish 'ConwayCell', (selector) ->
-    Conway.persistentCellCollection.find(selector)    
+    Conway.persistentCellCollection.find(selector)
 
   always = -> true
   everything = insert: always, update: always, remove: always

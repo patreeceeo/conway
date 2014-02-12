@@ -9,7 +9,7 @@ class Conway.Cell
   constructor: (@document) ->
   cssClassList: ->
     {state: state} = @document
-    "state-#{state}"      
+    "state-#{state}"
   neighbors: (selector = {}) ->
     {x: x, y: y} = @document
     _(Conway.cellCollection).select (doc) ->
@@ -19,7 +19,7 @@ class Conway.Cell
       dx = Math.abs(x - nx)
       dy = Math.abs(y - ny)
  
-      isNeighbor = 
+      isNeighbor =
         (dx <= 1 or dx is 20 - 1) and
         (dy <= 1 or dy is 20 - 1) and
         not isMe

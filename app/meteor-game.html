@@ -1,6 +1,6 @@
 <head>
   <title>Conway</title>
-  <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+  <!-- <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet"> -->
 </head>
 
 <body>
@@ -9,20 +9,19 @@
 
 <template name="game">
   <div id='game'>
-    <a href="http://en.wikipedia.org/wiki/Conway's_Game_of_Life" target="blank"><h1>Conway's Game of Life</h1></a>
     <div class='matrix'>
     {{#each cells}}
       <div class="tile state-{{state}}" data-cell-ID='{{_id}}'></div>
     {{/each}}
     </div>
-    <div class='button-group'>
-      {{#if showPauseButton}}
-      <button type=button data-button='pause'><i class='fa fa-pause'></i></button>
-      {{/if}}
-      {{#if showPlayButton}}
-      <button type=button data-button='play'><i class='fa fa-play'></i></button>
-      {{/if}}
-      <button type="button" data-button='save'><i class='fa fa-save'></i></button>
-    </div>
+    <!-- <div class='button-group'> -->
+    <!--   {{#if showPauseButton}} -->
+    <!--   <button type=button data-button='pause'><i class='fa fa-pause'></i></button> -->
+    <!--   {{/if}} -->
+    <!--   {{#if showPlayButton}} -->
+    <!--   <button type=button data-button='play'><i class='fa fa-play'></i></button> -->
+    <!--   {{/if}} -->
+    <!--   <button type="button" data-button='save'><i class='fa fa-save'></i></button> -->
+    <!-- </div> -->
   </div>
 </template>

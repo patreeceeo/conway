@@ -10,7 +10,7 @@ _.extend Conway,
       new Conway.Cell document
   createFixture: (options) ->
     Meteor.call 'createFixture', options
-  updateCell: (cell) -> 
+  updateCell: (cell) ->
   getCell: (id) ->
     new Conway.Cell _(@cellCollection).findWhere _id: id
   getCells: ->
@@ -37,7 +37,8 @@ _.extend Conway,
 @updateCells = (opinions = {}) ->
   for doc in Conway.cellCollection
     cell = new Conway.Cell doc
-    newState = Conway.getNextCellState?(doc, liveNeighbors: cell.neighbors(state: 'on'))
+    newState = Conway.getNextCellState? doc,
+      liveNeighbors: cell.neighbors(state: $ne: 'off')
     if not _.isEqual newState, doc.state
       @addToPatch doc, newState
   @applyPatch()
@@ -59,7 +60,7 @@ _.extend Conway,
 Meteor.startup ->
   Meteor.subscribe 'ConwayCell', {}
   updateCellsIntervalID = null
-  Conway.pause()
+  Conway.play()
   Deps.autorun ->
     if Conway.isPlaying()
       updateCellsIntervalID = setInterval updateCells, 100
